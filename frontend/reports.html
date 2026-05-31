@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Reports — SmartFarm</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/reports.css">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="nav-left">
+    <span class="nav-brand">🌱 SmartFarm</span>
+  </div>
+  <div class="nav-center">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="analysis.html">Analysis</a>
+    <a href="fields.html">Fields</a>
+    <a href="reports.html" class="nav-active">Reports</a>
+  </div>
+  <div class="nav-right">
+    <div class="live-pill">
+      <span class="status-dot online"></span>
+      <span>Live</span>
+    </div>
+    <button onclick="logout()">Logout</button>
+  </div>
+</nav>
+
+<!-- PAGE -->
+<div class="reports-page">
+
+  <!-- HEADER -->
+  <div class="reports-header">
+    <div>
+      <h1>Farm Reports</h1>
+      <p id="report-status">Generating report…</p>
+    </div>
+    <div class="reports-header-right">
+      <div class="dash-clock" id="clock">--:--:--</div>
+      <button class="download-btn" onclick="downloadPDF()">
+        ⬇ Download PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- SUMMARY BANNER -->
+  <div class="summary-banner" id="summary-banner">
+    <div class="summary-icon">🧠</div>
+    <div class="summary-text">
+      <div class="summary-title">System Summary</div>
+      <div class="summary-body" id="summary">Analyzing data…</div>
+    </div>
+    <span class="badge green" id="summary-badge">Normal</span>
+  </div>
+
+  <!-- METRIC CARDS -->
+  <div class="report-grid">
+
+    <div class="report-card">
+      <div class="report-card-icon" style="background:rgba(59,130,246,0.12);color:#60a5fa">💧</div>
+      <div class="report-card-label">Total Water Usage</div>
+      <div class="report-card-val" id="waterUsage">—</div>
+      <div class="report-card-sub">Estimated this session</div>
+    </div>
+
+    <div class="report-card">
+      <div class="report-card-icon" style="background:rgba(34,197,94,0.12);color:#22c55e">🌱</div>
+      <div class="report-card-label">Average Soil Moisture</div>
+      <div class="report-card-val" id="avgSoil">—</div>
+      <div class="report-card-sub" id="soil-sub">—</div>
+    </div>
+
+    <div class="report-card">
+      <div class="report-card-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b">🌡</div>
+      <div class="report-card-label">Temperature Status</div>
+      <div class="report-card-val" id="tempStatus">—</div>
+      <div class="report-card-sub" id="temp-sub">—</div>
+    </div>
+
+    <div class="report-card">
+      <div class="report-card-icon" style="background:rgba(34,197,94,0.12);color:#22c55e">🚰</div>
+      <div class="report-card-label">Tank Status</div>
+      <div class="report-card-val" id="tankStatus">—</div>
+      <div class="report-card-sub" id="tank-sub">—</div>
+    </div>
+
+  </div>
+
+  <!-- CHART -->
+  <div class="chart-section">
+    <div class="chart-section-header">
+      <h3>📊 Field Trend — Last 6 Readings</h3>
+      <div class="chart-legend">
+        <span class="legend-dot" style="background:#22c55e"></span> Soil
+        <span class="legend-dot" style="background:#f59e0b;margin-left:12px"></span> Temp
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="reportChart"></canvas>
+    </div>
+  </div>
+
+  <!-- AI INSIGHTS -->
+  <div class="insights-section">
+    <h3 class="insights-title">💡 AI Insights</h3>
+    <div class="insights-grid">
+      <div class="insight-item">
+        <span class="insight-icon">🌿</span>
+        <div>
+          <div class="insight-heading">Soil Health</div>
+          <div class="insight-body" id="insight-soil">—</div>
+        </div>
+      </div>
+      <div class="insight-item">
+        <span class="insight-icon">☀</span>
+        <div>
+          <div class="insight-heading">Temperature</div>
+          <div class="insight-body" id="insight-temp">—</div>
+        </div>
+      </div>
+      <div class="insight-item">
+        <span class="insight-icon">💧</span>
+        <div>
+          <div class="insight-heading">Irrigation</div>
+          <div class="insight-body" id="insight-irr">—</div>
+        </div>
+      </div>
+      <div class="insight-item">
+        <span class="insight-icon">📦</span>
+        <div>
+          <div class="insight-heading">Tank Reserve</div>
+          <div class="insight-body" id="insight-tank">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script type="module">
+  import { getLatestData } from "./js/api.js";
+
+  /* ── CLOCK ───────────────────────────────────────── */
+  function tick() {
+    document.getElementById('clock').textContent =
+      new Date().toLocaleTimeString('en-GB');
+  }
+  tick(); setInterval(tick, 1000);
+
+  /* ── STATE ───────────────────────────────────────── */
+  let reportData = {};
+  let chart;
+
+  /* ── INSIGHTS GENERATOR ──────────────────────────── */
+  function generateInsights(data) {
+    const waterUsage  = ((data.flowRate ?? 1.2) * 10).toFixed(2) + ' L';
+    const avgSoil     = (data.soil ?? 0) + '%';
+
+    let tempStatus = 'Normal';
+    let tempSub    = 'Optimal range for crops';
+    if (data.temperature > 32) { tempStatus = 'High';  tempSub = 'Above optimal — monitor closely'; }
+    if (data.temperature < 20) { tempStatus = 'Low';   tempSub = 'Below optimal — frost risk'; }
+
+    let tankStatus = 'Safe';
+    let tankSub    = 'Sufficient reserve';
+    if ((data.tank ?? 100) < 20) { tankStatus = 'Low'; tankSub = 'Refill required soon'; }
+
+    let summary     = 'System operating normally';
+    let badgeClass  = 'green';
+    if (data.rain)              { summary = 'Rain detected — irrigation paused';  badgeClass = 'blue';  }
+    if ((data.tank ?? 100) < 20){ summary = 'Low tank — refill required urgently'; badgeClass = 'warn'; }
+
+    const soilSub = data.soil > 70 ? 'Well hydrated' : data.soil > 40 ? 'Acceptable level' : 'Below threshold';
+
+    const iSoil = data.soil > 70
+      ? 'Soil moisture is in a healthy range. No immediate irrigation needed.'
+      : 'Soil moisture is below ideal. Consider scheduling irrigation soon.';
+    const iTemp = data.temperature > 32
+      ? 'High temperature detected. Increase watering frequency to prevent crop stress.'
+      : 'Temperature is within safe limits for most crops.';
+    const iIrr  = data.rain
+      ? 'Rain detected. Irrigation has been paused automatically.'
+      : 'No rain forecast. Irrigation schedule is active and optimized.';
+    const iTank = (data.tank ?? 100) < 20
+      ? 'Tank level is critically low. Refill immediately to avoid interruptions.'
+      : 'Tank has sufficient water reserve for the next irrigation cycle.';
+
+    return { waterUsage, avgSoil, tempStatus, tempSub, tankStatus, tankSub,
+             summary, badgeClass, soilSub, iSoil, iTemp, iIrr, iTank };
+  }
+
+  /* ── TREND DATA ──────────────────────────────────── */
+  function generateTrend(data) {
+    const labels = [], soil = [], temp = [];
+    for (let i = 5; i >= 0; i--) {
+      labels.push(`-${i * 5}s`);
+      soil.push(+(data.soil + (Math.random() * 6 - 3)).toFixed(1));
+      temp.push(+(data.temperature + (Math.random() * 2 - 1)).toFixed(1));
+    }
+    return { labels, soil, temp };
+  }
+
+  /* ── CHART ───────────────────────────────────────── */
+  Chart.defaults.color = '#9fb3b8';
+  Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+  Chart.defaults.font.size = 12;
+
+  function createChart(trend) {
+    if (chart) chart.destroy();
+    chart = new Chart(document.getElementById('reportChart'), {
+      type: 'line',
+      data: {
+        labels: trend.labels,
+        datasets: [
+          {
+            label: 'Soil (%)',
+            data: trend.soil,
+            borderColor: '#22c55e',
+            backgroundColor: '#22c55e18',
+            borderWidth: 2,
+            pointRadius: 4,
+            pointBackgroundColor: '#22c55e',
+            tension: 0.4,
+            fill: true,
+          },
+          {
+            label: 'Temp (°C)',
+            data: trend.temp,
+            borderColor: '#f59e0b',
+            backgroundColor: '#f59e0b18',
+            borderWidth: 2,
+            pointRadius: 4,
+            pointBackgroundColor: '#f59e0b',
+            tension: 0.4,
+            fill: true,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(7,11,14,0.92)',
+            borderColor: 'rgba(255,255,255,0.08)',
+            borderWidth: 1,
+            padding: 10,
+            titleColor: '#e6f1f2',
+          }
+        },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.04)' } },
+          y: { grid: { color: 'rgba(255,255,255,0.04)' }, beginAtZero: false }
+        }
+      }
+    });
+  }
+
+  /* ── LOAD REPORT ─────────────────────────────────── */
+  async function loadReport() {
+    try {
+      const data     = await getLatestData();
+      const insights = generateInsights(data);
+      reportData     = { ...data, ...insights };
+
+      document.getElementById('summary').textContent       = insights.summary;
+      document.getElementById('summary-badge').textContent =
+        insights.badgeClass === 'green' ? 'Normal' :
+        insights.badgeClass === 'blue'  ? 'Rain'   : 'Alert';
+      document.getElementById('summary-badge').className   = 'badge ' + insights.badgeClass;
+
+      document.getElementById('waterUsage').textContent = insights.waterUsage;
+      document.getElementById('avgSoil').textContent    = insights.avgSoil;
+      document.getElementById('soil-sub').textContent   = insights.soilSub;
+      document.getElementById('tempStatus').textContent = insights.tempStatus;
+      document.getElementById('temp-sub').textContent   = insights.tempSub;
+      document.getElementById('tankStatus').textContent = insights.tankStatus;
+      document.getElementById('tank-sub').textContent   = insights.tankSub;
+
+      document.getElementById('insight-soil').textContent = insights.iSoil;
+      document.getElementById('insight-temp').textContent = insights.iTemp;
+      document.getElementById('insight-irr').textContent  = insights.iIrr;
+      document.getElementById('insight-tank').textContent = insights.iTank;
+
+      createChart(generateTrend(data));
+
+      document.getElementById('report-status').textContent =
+        'Report generated at ' + new Date().toLocaleTimeString('en-GB');
+    } catch (e) {
+      console.error('Report load failed:', e);
+      document.getElementById('report-status').textContent = 'Failed to load data';
+    }
+  }
+
+  loadReport();
+
+  /* ── PDF EXPORT ──────────────────────────────────── */
+  window.downloadPDF = function () {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const d = reportData;
+    const now = new Date().toLocaleString('en-GB');
+
+    doc.setFillColor(7, 11, 14);
+    doc.rect(0, 0, 210, 297, 'F');
+
+    doc.setTextColor(34, 197, 94);
+    doc.setFontSize(20);
+    doc.text('SmartFarm — Precision Farming Report', 20, 22);
+
+    doc.setTextColor(159, 179, 184);
+    doc.setFontSize(10);
+    doc.text('Generated: ' + now, 20, 30);
+
+    doc.setDrawColor(255, 255, 255, 20);
+    doc.line(20, 35, 190, 35);
+
+    doc.setTextColor(230, 241, 242);
+    doc.setFontSize(13);
+    doc.text('Sensor Data', 20, 45);
+    doc.setFontSize(11);
+    doc.setTextColor(159, 179, 184);
+    doc.text('Soil Moisture : ' + (d.soil        ?? '—') + '%',   20, 55);
+    doc.text('Temperature   : ' + (d.temperature ?? '—') + '°C',  20, 63);
+    doc.text('Humidity      : ' + (d.humidity    ?? '—') + '%',   20, 71);
+    doc.text('Water Tank    : ' + (d.tank        ?? '—') + '%',   20, 79);
+
+    doc.line(20, 88, 190, 88);
+    doc.setTextColor(230, 241, 242);
+    doc.setFontSize(13);
+    doc.text('Analysis', 20, 97);
+    doc.setFontSize(11);
+    doc.setTextColor(159, 179, 184);
+    doc.text('Water Usage   : ' + (d.waterUsage  ?? '—'),         20, 107);
+    doc.text('Avg Soil      : ' + (d.avgSoil     ?? '—'),         20, 115);
+    doc.text('Temp Status   : ' + (d.tempStatus  ?? '—'),         20, 123);
+    doc.text('Tank Status   : ' + (d.tankStatus  ?? '—'),         20, 131);
+
+    doc.line(20, 140, 190, 140);
+    doc.setTextColor(230, 241, 242);
+    doc.setFontSize(13);
+    doc.text('Summary', 20, 149);
+    doc.setFontSize(11);
+    doc.setTextColor(159, 179, 184);
+    doc.text(d.summary ?? '—', 20, 159);
+
+    doc.line(20, 168, 190, 168);
+    doc.setTextColor(230, 241, 242);
+    doc.setFontSize(13);
+    doc.text('AI Insights', 20, 177);
+    doc.setFontSize(10);
+    doc.setTextColor(159, 179, 184);
+    const wrap = (txt, x, y) => { doc.text(doc.splitTextToSize(txt, 170), x, y); };
+    wrap('Soil   : ' + (d.iSoil ?? '—'), 20, 187);
+    wrap('Temp   : ' + (d.iTemp ?? '—'), 20, 198);
+    wrap('Irrig  : ' + (d.iIrr  ?? '—'), 20, 209);
+    wrap('Tank   : ' + (d.iTank ?? '—'), 20, 220);
+
+    doc.setTextColor(34, 197, 94);
+    doc.setFontSize(9);
+    doc.text('SmartFarm Precision Farming System', 20, 285);
+    doc.text(now, 150, 285);
+
+    doc.save('smartfarm-report-' + Date.now() + '.pdf');
+  };
+</script>
+
+</body>
+</html>

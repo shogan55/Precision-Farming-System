@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fields — SmartFarm</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/fields.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="nav-left">
+    <span class="nav-brand">🌱 SmartFarm</span>
+  </div>
+  <div class="nav-center">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="analysis.html">Analysis</a>
+    <a href="fields.html" class="nav-active">Fields</a>
+    <a href="reports.html">Reports</a>
+  </div>
+  <div class="nav-right">
+    <div class="live-pill">
+      <span class="status-dot online"></span>
+      <span>Live</span>
+    </div>
+    <button onclick="logout()">Logout</button>
+  </div>
+</nav>
+
+<!-- PAGE -->
+<div class="fields-page">
+
+  <!-- HEADER -->
+  <div class="fields-header">
+    <div>
+      <h1>Field View</h1>
+      <p id="field-status">Loading field data…</p>
+    </div>
+    <div class="fields-header-right">
+      <div class="dash-clock" id="clock">--:--:--</div>
+      <div class="data-range-pill" id="last-sync">Syncing…</div>
+    </div>
+  </div>
+
+  <!-- MAIN LAYOUT -->
+  <div class="field-container">
+
+    <!-- MAP -->
+    <div class="map-box">
+      <div class="map-toolbar">
+        <span class="map-label">📍 Pune, Maharashtra</span>
+        <div class="map-controls">
+          <button class="map-btn" id="btn-satellite">Satellite</button>
+          <button class="map-btn active" id="btn-street">Street</button>
+        </div>
+      </div>
+      <div id="map"></div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="field-sidebar">
+
+      <!-- SENSOR STATS -->
+      <div class="sidebar-card">
+        <div class="sidebar-card-header">
+          <h3>📡 Live Sensors</h3>
+          <span class="pulse-dot"></span>
+        </div>
+
+        <div class="sensor-row">
+          <div class="sensor-icon" style="background:rgba(34,197,94,0.12);color:#22c55e">🌱</div>
+          <div class="sensor-info">
+            <span class="sensor-label">Soil Moisture</span>
+            <span class="sensor-val" id="soil">—</span>
+          </div>
+          <div class="sensor-bar-wrap">
+            <div class="sensor-bar" id="soil-bar" style="background:#22c55e"></div>
+          </div>
+        </div>
+
+        <div class="sensor-row">
+          <div class="sensor-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b">🌡</div>
+          <div class="sensor-info">
+            <span class="sensor-label">Temperature</span>
+            <span class="sensor-val" id="temp">—</span>
+          </div>
+          <div class="sensor-bar-wrap">
+            <div class="sensor-bar" id="temp-bar" style="background:#f59e0b"></div>
+          </div>
+        </div>
+
+        <div class="sensor-row">
+          <div class="sensor-icon" style="background:rgba(59,130,246,0.12);color:#60a5fa">💧</div>
+          <div class="sensor-info">
+            <span class="sensor-label">Humidity</span>
+            <span class="sensor-val" id="humidity">—</span>
+          </div>
+          <div class="sensor-bar-wrap">
+            <div class="sensor-bar" id="humidity-bar" style="background:#60a5fa"></div>
+          </div>
+        </div>
+
+        <div class="sensor-row">
+          <div class="sensor-icon" style="background:rgba(34,197,94,0.12);color:#22c55e">🚰</div>
+          <div class="sensor-info">
+            <span class="sensor-label">Water Tank</span>
+            <span class="sensor-val" id="tank">—</span>
+          </div>
+          <div class="sensor-bar-wrap">
+            <div class="sensor-bar" id="tank-bar" style="background:#22c55e"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FIELD LIST -->
+      <div class="sidebar-card">
+        <div class="sidebar-card-header">
+          <h3>🌾 Fields</h3>
+        </div>
+
+        <div class="field-item active-field" data-lat="18.5204" data-lng="73.8567" data-name="Field A — Wheat">
+          <div class="field-item-left">
+            <span class="field-dot" style="background:#22c55e"></span>
+            <div>
+              <div class="field-item-name">Field A — Wheat</div>
+              <div class="field-item-sub">2.4 ha · Zone 1</div>
+            </div>
+          </div>
+          <span class="field-badge good-badge">Healthy</span>
+        </div>
+
+        <div class="field-item" data-lat="18.5254" data-lng="73.8620" data-name="Field B — Tomato">
+          <div class="field-item-left">
+            <span class="field-dot" style="background:#f59e0b"></span>
+            <div>
+              <div class="field-item-name">Field B — Tomato</div>
+              <div class="field-item-sub">1.8 ha · Zone 2</div>
+            </div>
+          </div>
+          <span class="field-badge warn-badge">Monitor</span>
+        </div>
+
+        <div class="field-item" data-lat="18.5150" data-lng="73.8500" data-name="Field C — Corn">
+          <div class="field-item-left">
+            <span class="field-dot" style="background:#60a5fa"></span>
+            <div>
+              <div class="field-item-name">Field C — Corn</div>
+              <div class="field-item-sub">3.1 ha · Zone 3</div>
+            </div>
+          </div>
+          <span class="field-badge info-badge">Scheduled</span>
+        </div>
+
+        <div class="field-item" data-lat="18.5300" data-lng="73.8450" data-name="Field D — Soy">
+          <div class="field-item-left">
+            <span class="field-dot" style="background:#22c55e"></span>
+            <div>
+              <div class="field-item-name">Field D — Soy</div>
+              <div class="field-item-sub">2.0 ha · Zone 4</div>
+            </div>
+          </div>
+          <span class="field-badge good-badge">Healthy</span>
+        </div>
+
+      </div>
+
+      <!-- QUICK ACTIONS -->
+      <div class="sidebar-card">
+        <div class="sidebar-card-header">
+          <h3>⚡ Quick Actions</h3>
+        </div>
+        <div class="action-buttons">
+          <button class="action-btn action-btn-green" onclick="triggerIrrigate()">
+            💧 Irrigate Now
+          </button>
+          <button class="action-btn action-btn-outline" onclick="triggerReport()">
+            📄 Export Report
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script type="module">
+  import { getLatestData } from "./js/api.js";
+
+  /* ── CLOCK ───────────────────────────────────────── */
+  function tick() {
+    document.getElementById('clock').textContent =
+      new Date().toLocaleTimeString('en-GB');
+  }
+  tick(); setInterval(tick, 1000);
+
+  /* ── MAP SETUP ───────────────────────────────────── */
+  const streetLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
+  const satLayer    = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
+
+  const map = L.map('map', { zoomControl: true, layers: [streetLayer] })
+               .setView([18.5204, 73.8567], 14);
+
+  /* Field markers */
+  const fields = [
+    { lat: 18.5204, lng: 73.8567, name: 'Field A — Wheat',  color: '#22c55e' },
+    { lat: 18.5254, lng: 73.8620, name: 'Field B — Tomato', color: '#f59e0b' },
+    { lat: 18.5150, lng: 73.8500, name: 'Field C — Corn',   color: '#60a5fa' },
+    { lat: 18.5300, lng: 73.8450, name: 'Field D — Soy',    color: '#22c55e' },
+  ];
+
+  fields.forEach(f => {
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="
+        width:14px;height:14px;border-radius:50%;
+        background:${f.color};
+        border:2px solid #fff;
+        box-shadow:0 0 8px ${f.color}88;
+      "></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+    });
+    L.marker([f.lat, f.lng], { icon })
+      .addTo(map)
+      .bindPopup(`<b>${f.name}</b>`);
+  });
+
+  /* Layer toggle */
+  let isSat = false;
+  document.getElementById('btn-satellite').addEventListener('click', () => {
+    if (!isSat) { map.removeLayer(streetLayer); map.addLayer(satLayer); isSat = true; }
+    document.getElementById('btn-satellite').classList.add('active');
+    document.getElementById('btn-street').classList.remove('active');
+  });
+  document.getElementById('btn-street').addEventListener('click', () => {
+    if (isSat) { map.removeLayer(satLayer); map.addLayer(streetLayer); isSat = false; }
+    document.getElementById('btn-street').classList.add('active');
+    document.getElementById('btn-satellite').classList.remove('active');
+  });
+
+  /* Click field item → pan map */
+  document.querySelectorAll('.field-item').forEach(el => {
+    el.addEventListener('click', () => {
+      document.querySelectorAll('.field-item').forEach(i => i.classList.remove('active-field'));
+      el.classList.add('active-field');
+      const lat = parseFloat(el.dataset.lat);
+      const lng = parseFloat(el.dataset.lng);
+      map.flyTo([lat, lng], 15, { duration: 1 });
+    });
+  });
+
+  /* ── SENSOR DATA ─────────────────────────────────── */
+  function setBar(id, pct) {
+    document.getElementById(id).style.width = Math.min(pct, 100) + '%';
+  }
+
+  async function loadField() {
+    try {
+      const data = await getLatestData();
+      const time = new Date().toLocaleTimeString('en-GB');
+
+      document.getElementById('soil').textContent     = (data.soil        ?? '—') + '%';
+      document.getElementById('temp').textContent     = (data.temperature ?? '—') + '°C';
+      document.getElementById('humidity').textContent = (data.humidity    ?? '—') + '%';
+      document.getElementById('tank').textContent     = (data.tank        ?? '—') + '%';
+
+      setBar('soil-bar',     data.soil        ?? 0);
+      setBar('temp-bar',     ((data.temperature ?? 0) / 50) * 100);
+      setBar('humidity-bar', data.humidity    ?? 0);
+      setBar('tank-bar',     data.tank        ?? 0);
+
+      document.getElementById('field-status').textContent = 'All sensors online';
+      document.getElementById('last-sync').textContent    = 'Last sync ' + time;
+    } catch (e) {
+      console.error('Field data error:', e);
+      document.getElementById('field-status').textContent = 'Sensor connection issue';
+    }
+  }
+
+  loadField();
+  setInterval(loadField, 5000);
+
+  /* ── QUICK ACTIONS ───────────────────────────────── */
+  window.triggerIrrigate = () => alert('Irrigation cycle started for active field.');
+  window.triggerReport   = () => window.location.href = 'reports.html';
+</script>
+
+</body>
+</html>

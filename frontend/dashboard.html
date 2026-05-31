@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Precision Farming</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="nav-left">
+    <span class="nav-brand">🌱 SmartFarm</span>
+  </div>
+  <div class="nav-center">
+    <a href="dashboard.html" class="nav-active">Dashboard</a>
+    <a href="analysis.html">Analysis</a>
+    <a href="fields.html">Fields</a>
+    <a href="reports.html">Reports</a>
+  </div>
+  <div class="nav-right">
+    <div class="live-pill">
+      <span class="status-dot online"></span>
+      <span>Live</span>
+    </div>
+    <button onclick="logout()">Logout</button>
+  </div>
+</nav>
+
+<!-- DASHBOARD -->
+<div class="dashboard">
+
+  <!-- HEADER -->
+  <div class="dashboard-header">
+    <div>
+      <h1>Precision Farming Monitor</h1>
+      <p id="status">Connecting to sensors…</p>
+    </div>
+    <div class="header-right">
+      <div class="dash-clock" id="clock">--:--:--</div>
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <!-- SMART DECISION -->
+    <div class="card span-8 decision-card">
+      <div class="decision-header">
+        <h3>🧠 Smart Irrigation Decision</h3>
+        <span class="badge green" id="decisionBadge">Analyzing</span>
+      </div>
+      <p class="big-text" id="decision">Analyzing…</p>
+      <div class="divider"></div>
+      <p id="reason" class="card-sub">Waiting for data…</p>
+      <div class="updated-time" id="updated"></div>
+    </div>
+
+    <!-- WATER TANK -->
+    <div class="card span-4 center">
+      <h3>🚰 Water Tank</h3>
+      <div class="tank-wrap">
+        <div class="tank-body">
+          <div class="tank-fill" id="tankFill" style="height:0%"></div>
+          <div class="tank-label-inside" id="tankPct">—</div>
+        </div>
+        <p class="card-sub" style="margin-top:8px">Capacity remaining</p>
+      </div>
+    </div>
+
+    <!-- SOIL -->
+    <div class="card center">
+      <h3>🌱 Soil</h3>
+      <div class="gauge" id="soilGauge">—</div>
+      <p class="card-sub" id="soilStatus">—</p>
+    </div>
+
+    <!-- TEMP -->
+    <div class="card center">
+      <h3>🌡 Temp</h3>
+      <div class="gauge" id="tempGauge">—</div>
+      <p class="card-sub" id="tempStatus">—</p>
+    </div>
+
+    <!-- HUMIDITY -->
+    <div class="card center">
+      <h3>💧 Humidity</h3>
+      <div class="gauge" id="humidityGauge">—</div>
+      <p class="card-sub" id="humidityStatus">—</p>
+    </div>
+
+    <!-- LIGHT -->
+    <div class="card center">
+      <h3>☀ Light</h3>
+      <div class="gauge" id="lightGauge">—</div>
+      <p class="card-sub">lux</p>
+    </div>
+
+    <!-- RAIN -->
+    <div class="card span-6">
+      <h3>🌧 Rain Status</h3>
+      <p class="card-value" id="rain">—</p>
+      <p class="card-sub">Last 24 hours</p>
+    </div>
+
+    <!-- PUMP -->
+    <div class="card span-6">
+      <h3>⚙ Pump</h3>
+      <div class="pump-row">
+        <span class="pump-dot" id="pumpDot"></span>
+        <p class="card-value" id="pump">—</p>
+      </div>
+      <p class="card-sub" id="pumpSub">—</p>
+    </div>
+
+    <!-- WEATHER -->
+    <div class="card span-6 weather-card">
+      <h3>🌤 Weather Forecast</h3>
+      <div class="weather-block">
+        <div class="weather-row">
+          <span>🌡 Temperature</span>
+          <span id="weatherTemp">—</span>
+        </div>
+        <div class="weather-row">
+          <span>🌧 Rainfall chance</span>
+          <span id="weatherRain">—</span>
+        </div>
+        <div class="weather-row">
+          <span>🧠 Recommendation</span>
+          <span id="weatherAdvice">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/dashboard.js"></script>
+<script>
+  /* Live clock */
+  function tick() {
+    document.getElementById('clock').textContent =
+      new Date().toLocaleTimeString('en-GB');
+  }
+  tick(); setInterval(tick, 1000);
+
+  /* Gauge color helper */
+  function gaugeClass(val, low, high) {
+    if (val < low) return 'warn';
+    if (val > high) return 'bad';
+    return 'good';
+  }
+
+  /* Call this from dashboard.js with your real sensor data */
+  window.updateDashboard = function(data) {
+    document.getElementById('status').textContent =
+      'All sensors online — synced at ' + new Date().toLocaleTimeString('en-GB');
+
+    document.getElementById('decision').textContent  = data.decision  || '—';
+    document.getElementById('reason').textContent    = data.reason    || '—';
+    document.getElementById('updated').textContent   = 'Updated ' + new Date().toLocaleTimeString('en-GB');
+    const badge = document.getElementById('decisionBadge');
+    badge.textContent = data.badgeText || 'OK';
+    badge.className   = 'badge ' + (data.badgeClass || 'green');
+
+    const t = data.tank ?? 0;
+    document.getElementById('tankFill').style.height = t + '%';
+    document.getElementById('tankPct').textContent   = t + '%';
+
+    const soil = data.soil ?? 0;
+    const sg = document.getElementById('soilGauge');
+    sg.textContent = soil + '%';
+    sg.className   = 'gauge ' + gaugeClass(soil, 40, 85);
+    document.getElementById('soilStatus').textContent = data.soilStatus || '';
+
+    const temp = data.temp ?? 0;
+    const tg = document.getElementById('tempGauge');
+    tg.textContent = temp + '°C';
+    tg.className   = 'gauge ' + gaugeClass(temp, 10, 35);
+    document.getElementById('tempStatus').textContent = data.tempStatus || '';
+
+    const hum = data.humidity ?? 0;
+    const hg = document.getElementById('humidityGauge');
+    hg.textContent = hum + '%';
+    hg.className   = 'gauge ' + gaugeClass(hum, 30, 80);
+    document.getElementById('humidityStatus').textContent = data.humidStatus || '';
+
+    const lux = data.light ?? 0;
+    const lg = document.getElementById('lightGauge');
+    lg.textContent = lux >= 1000 ? Math.round(lux / 1000) + 'k' : lux;
+    lg.className   = 'gauge info';
+
+    document.getElementById('rain').textContent    = data.rain    || '—';
+    document.getElementById('pump').textContent    = data.pumpOn  ? 'Active' : 'Off';
+    document.getElementById('pumpSub').textContent = data.pumpSub || '';
+    const dot = document.getElementById('pumpDot');
+    dot.className = 'pump-dot ' + (data.pumpOn ? 'pump-on' : 'pump-off');
+
+    document.getElementById('weatherTemp').textContent   = data.weatherTemp   || '—';
+    document.getElementById('weatherRain').textContent   = data.weatherRain   || '—';
+    document.getElementById('weatherAdvice').textContent = data.weatherAdvice || '—';
+  };
+
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Analysis — SmartFarm</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/analysis.css">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="nav-left">
+    <span class="nav-brand">🌱 SmartFarm</span>
+  </div>
+  <div class="nav-center">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="analysis.html" class="nav-active">Analysis</a>
+    <a href="fields.html">Fields</a>
+    <a href="reports.html">Reports</a>
+  </div>
+  <div class="nav-right">
+    <div class="live-pill">
+      <span class="status-dot online"></span>
+      <span>Live</span>
+    </div>
+    <button onclick="logout()">Logout</button>
+  </div>
+</nav>
+
+<!-- PAGE -->
+<div class="analysis-page">
+
+  <!-- HEADER -->
+  <div class="analysis-header">
+    <div>
+      <h1>Field Analysis</h1>
+      <p id="analysis-status">Fetching sensor history…</p>
+    </div>
+    <div class="analysis-header-right">
+      <div class="dash-clock" id="clock">--:--:--</div>
+      <div class="data-range-pill">Last 10 readings · 5s interval</div>
+    </div>
+  </div>
+
+  <!-- STAT STRIP -->
+  <div class="stat-strip">
+    <div class="stat-pill">
+      <span class="stat-label">🌱 Soil</span>
+      <span class="stat-val" id="strip-soil">—</span>
+    </div>
+    <div class="stat-pill">
+      <span class="stat-label">🌡 Temp</span>
+      <span class="stat-val" id="strip-temp">—</span>
+    </div>
+    <div class="stat-pill">
+      <span class="stat-label">💧 Humidity</span>
+      <span class="stat-val" id="strip-humidity">—</span>
+    </div>
+    <div class="stat-pill">
+      <span class="stat-label">🚰 Tank</span>
+      <span class="stat-val" id="strip-tank">—</span>
+    </div>
+  </div>
+
+  <!-- CHARTS GRID -->
+  <div class="analysis-grid">
+
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <h3>🌱 Soil Moisture Trend</h3>
+        <span class="chart-badge chart-badge-green">%</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="soilChart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <h3>🌡 Temperature Trend</h3>
+        <span class="chart-badge chart-badge-amber">°C</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="tempChart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <h3>💧 Humidity Trend</h3>
+        <span class="chart-badge chart-badge-blue">%</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="humidityChart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <h3>🚰 Water Tank Trend</h3>
+        <span class="chart-badge chart-badge-green">%</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="tankChart"></canvas>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script type="module">
+  import { getLatestData } from "./js/api.js";
+
+  /* ── CLOCK ───────────────────────────────────────── */
+  function tick() {
+    document.getElementById('clock').textContent =
+      new Date().toLocaleTimeString('en-GB');
+  }
+  tick(); setInterval(tick, 1000);
+
+  /* ── CHART FACTORY ───────────────────────────────── */
+  Chart.defaults.color = '#9fb3b8';
+  Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+  Chart.defaults.font.size = 12;
+
+  function makeChart(id, label, color) {
+    return new Chart(document.getElementById(id), {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label,
+          data: [],
+          borderColor: color,
+          backgroundColor: color + '18',
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: color,
+          tension: 0.4,
+          fill: true,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 400 },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(7,11,14,0.92)',
+            borderColor: 'rgba(255,255,255,0.08)',
+            borderWidth: 1,
+            padding: 10,
+            titleColor: '#e6f1f2',
+            bodyColor: color,
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(255,255,255,0.04)' },
+            ticks: { maxRotation: 0 }
+          },
+          y: {
+            grid: { color: 'rgba(255,255,255,0.04)' },
+            beginAtZero: false,
+          }
+        }
+      }
+    });
+  }
+
+  const soilChart     = makeChart('soilChart',     'Soil Moisture (%)', '#22c55e');
+  const tempChart     = makeChart('tempChart',     'Temperature (°C)',  '#f59e0b');
+  const humidityChart = makeChart('humidityChart', 'Humidity (%)',      '#3b82f6');
+  const tankChart     = makeChart('tankChart',     'Water Tank (%)',    '#22c55e');
+
+  const MAX = 10;
+
+  function push(chart, label, value) {
+    chart.data.labels.push(label);
+    chart.data.datasets[0].data.push(value);
+    if (chart.data.labels.length > MAX) {
+      chart.data.labels.shift();
+      chart.data.datasets[0].data.shift();
+    }
+    chart.update();
+  }
+
+  function strip(id, val, unit) {
+    document.getElementById(id).textContent = val != null ? val + unit : '—';
+  }
+
+  async function updateCharts() {
+    try {
+      const data = await getLatestData();
+      const time = new Date().toLocaleTimeString('en-GB');
+
+      push(soilChart,     time, data.soil);
+      push(tempChart,     time, data.temperature);
+      push(humidityChart, time, data.humidity);
+      push(tankChart,     time, data.tankLevel);
+
+      strip('strip-soil',     data.soil,        '%');
+      strip('strip-temp',     data.temperature, '°C');
+      strip('strip-humidity', data.humidity,    '%');
+      strip('strip-tank',     data.tankLevel,   '%');
+
+      document.getElementById('analysis-status').textContent =
+        'Live · last update ' + time;
+    } catch (e) {
+      console.error('Analysis update failed:', e);
+    }
+  }
+
+  updateCharts();
+  setInterval(updateCharts, 5000);
+</script>
+
+</body>
+</html>
